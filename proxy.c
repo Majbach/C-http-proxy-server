@@ -115,4 +115,4 @@ void free_request_info(struct request_info* r) //function to free memory allocat
     free(r->headers);
     free(r);
 }
-//probably dirty way to do it but it works
+//probably dirty way to do a proxy it but it works
