@@ -15,10 +15,10 @@ int proxy_handle(int fd);
 int main() //program driver, handles listening and incoming requests
 {
     int sock_opt=1;
-    int cli_fd,srv_fd;//file descriptors for listening, incoming and proxy socket
-    struct sockaddr_in server,client;//structures holding needed address data
-    socklen_t len;//pretty much unused
-    //setting up listening socket, primitive but it works
+    int cli_fd,srv_fd;//file descriptors for listening and client socket
+    struct sockaddr_in server,client;
+    socklen_t len;
+    //setting up listening socket
     server.sin_family=AF_INET;
     server.sin_addr.s_addr=htons(INADDR_ANY);
     server.sin_port=htons(PORT);
@@ -38,7 +38,7 @@ int main() //program driver, handles listening and incoming requests
                 cli_fd=accept(srv_fd,(struct sockaddr*)&client,&len);
                 switch(fork()){ //fork() to allow multiple requests at the same time
                     case 0:
-                        proxy_handle(cli_fd); //just to keep code organized
+                        proxy_handle(cli_fd);
                         close(cli_fd);
                         close(srv_fd);
                         return 0;
@@ -59,17 +59,16 @@ int proxy_handle(int cli_fd)
     struct request_info *req;
     struct addrinfo *srv;
     struct addrinfo crit;
-    //setting up for host resolving
     //getting request and parsing it
     data=data_in(cli_fd,&lenght);
     req=get_request_info(data,lenght);
     if(req==NULL)
     {
-        fputs("you fucked up man\n",stderr);
         free(data);
         free_request_info(req);
         return -1;
     }
+    //resolving host
     crit.ai_family=AF_INET;
     crit.ai_socktype=SOCK_STREAM;
     crit.ai_protocol=0;
@@ -78,15 +77,14 @@ int proxy_handle(int cli_fd)
     crit.ai_addr=NULL;
     crit.ai_canonname=NULL;
     crit.ai_next=NULL;
-    if(getaddrinfo(req->host,req->port,&crit,&srv)!=0)
+    if(getaddrinfo(req->host,req->port,&crit,&srv)!=0) //any errors are just meant to stop the proxy
     {
-        fputs("the host is fucked man\n",stderr);
         return -1;
     }
     conn_fd=socket(AF_INET,SOCK_STREAM,0);
     if(connect(conn_fd,srv->ai_addr,sizeof(struct sockaddr))==-1) //connecting to desired host
     {
-        fputs("the port is probably closed\n",stderr);
+        free(data);
         return -1;
     }
     strcpy(data,req->method);
@@ -100,6 +98,7 @@ int proxy_handle(int cli_fd)
         if(data_out(cli_fd,data,lenght)==-1)
             break;
     }
+    free(data);
     close(conn_fd);
     return 1;
 }
