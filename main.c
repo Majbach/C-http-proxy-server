@@ -91,6 +91,7 @@ int proxy_handle(int cli_fd)
     strcat(data," ");
     strncat(data,req->resource,BUFFER_SIZE-strlen(data));
     strncat(data,req->headers,BUFFER_SIZE-strlen(data));
+    free_request_info(req);
     data_out(conn_fd,data,strlen(data));
     while(data!=NULL)
     {
